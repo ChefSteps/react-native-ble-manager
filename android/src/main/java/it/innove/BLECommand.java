@@ -10,25 +10,32 @@ class BLECommand {
 	// BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
 	// BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 
+	private Callback callback;
 	private UUID serviceUUID;
 	private UUID characteristicUUID;
 	private byte[] data;
 	private int type;
 
 
-	public BLECommand(UUID serviceUUID, UUID characteristicUUID, int type) {
+	public BLECommand(Callback callback, UUID serviceUUID, UUID characteristicUUID, int type) {
+		this.callback = callback;
 		this.serviceUUID = serviceUUID;
 		this.characteristicUUID = characteristicUUID;
 		this.type = type;
 	}
 
-	public BLECommand(UUID serviceUUID, UUID characteristicUUID, byte[] data, int type) {
+	public BLECommand(Callback callback, UUID serviceUUID, UUID characteristicUUID, byte[] data, int type) {
+		this.callback = callback;
 		this.serviceUUID = serviceUUID;
 		this.characteristicUUID = characteristicUUID;
 		this.data = data;
 		this.type = type;
 	}
 
+	public Callback getCallback() {
+		return callback;
+	}
+	
 	public int getType() {
 		return type;
 	}
