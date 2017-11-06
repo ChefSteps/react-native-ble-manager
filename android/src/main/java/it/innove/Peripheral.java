@@ -23,6 +23,7 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 
 import java.util.*;
+import static android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_HIGH;
 
 /**
  * Peripheral wraps the BluetoothDevice and provides methods to convert to JSON.
@@ -238,7 +239,7 @@ public class Peripheral extends BluetoothGattCallback {
 				connectCallback.invoke();
 				connectCallback = null;
 			}
-			
+
 		} else if (newState == BluetoothGatt.STATE_DISCONNECTED){
 
 			if (connected) {
@@ -536,6 +537,7 @@ public class Peripheral extends BluetoothGattCallback {
 		}
 		this.retrieveServicesCallback = callback;
 
+		gatt.requestConnectionPriority(CONNECTION_PRIORITY_HIGH);
 		gatt.discoverServices();
 	}
 
