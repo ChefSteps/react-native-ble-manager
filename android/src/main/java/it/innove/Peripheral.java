@@ -385,6 +385,7 @@ public class Peripheral extends BluetoothGattCallback {
 
             readRSSICallback = null;
         }
+        commandCompleted();
     }
 
     private void setNotify(UUID serviceUUID, UUID characteristicUUID, Boolean notify, Callback callback) {
@@ -448,11 +449,13 @@ public class Peripheral extends BluetoothGattCallback {
     public void registerNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
         Log.d(LOG_TAG, "registerNotify");
         this.setNotify(serviceUUID, characteristicUUID, true, callback);
+        commandCompleted();
     }
 
     public void removeNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
         Log.d(LOG_TAG, "removeNotify");
         this.setNotify(serviceUUID, characteristicUUID, false, callback);
+        commandCompleted();
     }
 
     // Some devices reuse UUIDs across characteristics, so we can't use service.getCharacteristic(characteristicUUID)
@@ -516,6 +519,7 @@ public class Peripheral extends BluetoothGattCallback {
                 callback.invoke("Read failed", null);
             }
         }
+        commandCompleted();
     }
 
     public void readRSSI(Callback callback) {
@@ -534,6 +538,7 @@ public class Peripheral extends BluetoothGattCallback {
             readCallback = null;
             callback.invoke("Read RSSI failed", null);
         }
+        commandCompleted();
     }
 
     public void retrieveServices(Callback callback) {
@@ -720,8 +725,8 @@ public class Peripheral extends BluetoothGattCallback {
     }
 
     // New queue logic
-    public void queueRead(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
-        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.READ);
+    public void queueRead(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, null, null, callback, BLECommand.READ);
         queueCommand(command);
     }
 
@@ -730,13 +735,13 @@ public class Peripheral extends BluetoothGattCallback {
         queueCommand(command);
     }
 
-    public void queueRegisterNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
-        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.REGISTER_NOTIFY);
+    public void queueRegisterNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, null, null, callback, BLECommand.REGISTER_NOTIFY);
         queueCommand(command);
     }
 
-    public void queueRemoveNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
-        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.REMOVE_NOTIFY);
+    public void queueRemoveNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, null, null, callback, BLECommand.REMOVE_NOTIFY);
         queueCommand(command);
     }
 
@@ -747,10 +752,6 @@ public class Peripheral extends BluetoothGattCallback {
 
     private void queueCommand(BLECommand command) {
         commandQueue.add(command);
-
-        // Unsure. Lost some Cordova PluginResult.Status.NO_RESULT stuff.
-        // Pretty sure invoking the callback with nothing is the same.
-        command.getCallback().invoke();
 
         if (!bleProcessing) {
             processCommands();

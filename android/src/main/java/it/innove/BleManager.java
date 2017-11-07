@@ -215,7 +215,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			peripheral.registerNotify(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
+			peripheral.queueRegisterNotifyCallback(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
 		} else
 			callback.invoke("Peripheral not found");
 	}
@@ -226,7 +226,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			peripheral.removeNotify(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
+			peripheral.queueRemoveNotifyCallback(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
 		} else
 			callback.invoke("Peripheral not found");
 	}
@@ -243,7 +243,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 				decoded[i] = new Integer(message.getInt(i)).byteValue();
 			}
 			Log.d(LOG_TAG, "Message(" + decoded.length + "): " + bytesToHex(decoded));
-			peripheral.write(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), decoded, maxByteSize, null, callback, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+			peripheral.queueWrite(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), decoded, maxByteSize, null, callback, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
 		} else
 			callback.invoke("Peripheral not found");
 	}
@@ -259,7 +259,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 				decoded[i] = new Integer(message.getInt(i)).byteValue();
 			}
 			Log.d(LOG_TAG, "Message(" + decoded.length + "): " + bytesToHex(decoded));
-			peripheral.write(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), decoded, maxByteSize, queueSleepTime, callback, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+			peripheral.queueWrite(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), decoded, maxByteSize, queueSleepTime, callback, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
 		} else
 			callback.invoke("Peripheral not found");
 	}
@@ -269,7 +269,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		Log.d(LOG_TAG, "Read from: " + deviceUUID);
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			peripheral.read(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
+			peripheral.queueRead(UUIDHelper.uuidFromString(serviceUUID), UUIDHelper.uuidFromString(characteristicUUID), callback);
 		} else
 			callback.invoke("Peripheral not found", null);
 	}
@@ -290,7 +290,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		Log.d(LOG_TAG, "Read RSSI from: " + deviceUUID);
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			peripheral.readRSSI(callback);
+			peripheral.queueReadRSSI(callback);
 		} else
 			callback.invoke("Peripheral not found", null);
 	}
