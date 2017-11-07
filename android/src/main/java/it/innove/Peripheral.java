@@ -52,6 +52,8 @@ public class Peripheral extends BluetoothGattCallback {
     private Callback writeCallback;
     private Callback registerNotifyCallback;
 
+    private ReactContext reactContext;
+
     private List<byte[]> writeQueue = new ArrayList<>();
 
     public Peripheral(BluetoothDevice device, int advertisingRSSI, byte[] scanRecord, ReactContext reactContext) {
@@ -718,28 +720,28 @@ public class Peripheral extends BluetoothGattCallback {
     }
 
     // New queue logic
-    public void queueRead(Callback callback, UUID serviceUUID, UUID characteristicUUID) {
-        BLECommand command = new BLECommand(callback, serviceUUID, characteristicUUID, BLECommand.READ);
+    public void queueRead(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.READ);
         queueCommand(command);
     }
 
-    public void queueWrite(Callback callback, UUID serviceUUID, UUID characteristicUUID, byte[] data, int writeType) {
-        BLECommand command = new BLECommand(callback, serviceUUID, characteristicUUID, data, writeType);
+    public void queueWrite(UUID serviceUUID, UUID characteristicUUID, byte[] data, Integer maxByteSize, Integer queueSleepTime, Callback callback, int writeType) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, data, maxByteSize, queueSleepTime, callback, writeType);
         queueCommand(command);
     }
 
-    public void queueRegisterNotifyCallback(Callback callback, UUID serviceUUID, UUID characteristicUUID) {
-        BLECommand command = new BLECommand(callback, serviceUUID, characteristicUUID, BLECommand.REGISTER_NOTIFY);
+    public void queueRegisterNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.REGISTER_NOTIFY);
         queueCommand(command);
     }
 
-    public void queueRemoveNotifyCallback(Callback callback, UUID serviceUUID, UUID characteristicUUID) {
-        BLECommand command = new BLECommand(callback, serviceUUID, characteristicUUID, BLECommand.REMOVE_NOTIFY);
+    public void queueRemoveNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Integer maxByteSize, Integer queueSleepTime, Callback callback) {
+        BLECommand command = new BLECommand(serviceUUID, characteristicUUID, maxByteSize, queueSleepTime, callback, BLECommand.REMOVE_NOTIFY);
         queueCommand(command);
     }
 
     public void queueReadRSSI(Callback callback) {
-        BLECommand command = new BLECommand(callback, null, null, BLECommand.READ_RSSI);
+        BLECommand command = new BLECommand(null, null, null, null, callback, BLECommand.READ_RSSI);
         queueCommand(command);
     }
 
@@ -757,7 +759,7 @@ public class Peripheral extends BluetoothGattCallback {
 
     // command finished, queue the next command
     private void commandCompleted() {
-        Log.d(TAG, "Processing Complete");
+        Log.d(LOG_TAG, "Processing Complete");
         bleProcessing = false;
         processCommands();
     }
@@ -775,15 +777,15 @@ public class Peripheral extends BluetoothGattCallback {
             if (command.getType() == BLECommand.READ) {
                 Log.d(LOG_TAG, "Read " + command.getCharacteristicUUID());
                 bleProcessing = true;
-                read(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID());
+                read(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
             } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) {
                 Log.d(LOG_TAG, "Write " + command.getCharacteristicUUID());
                 bleProcessing = true;
-                write(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getType());
+                write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
             } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
                 Log.d(LOG_TAG, "Write No Response " + command.getCharacteristicUUID());
                 bleProcessing = true;
-                write(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getType());
+                write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
             } else if (command.getType() == BLECommand.REGISTER_NOTIFY) {
                 Log.d(LOG_TAG, "Register Notify " + command.getCharacteristicUUID());
                 bleProcessing = true;
