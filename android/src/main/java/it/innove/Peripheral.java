@@ -764,7 +764,7 @@ public class Peripheral extends BluetoothGattCallback {
 
     // process the queue
     private void processCommands() {
-        Log.d(TAG, "Processing Commands");
+        Log.d(LOG_TAG, "Processing Commands");
 
         if (bleProcessing) {
             return;
@@ -773,27 +773,27 @@ public class Peripheral extends BluetoothGattCallback {
         BLECommand command = commandQueue.poll();
         if (command != null) {
             if (command.getType() == BLECommand.READ) {
-                Log.d(TAG, "Read " + command.getCharacteristicUUID());
+                Log.d(LOG_TAG, "Read " + command.getCharacteristicUUID());
                 bleProcessing = true;
                 read(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID());
             } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) {
-                Log.d(TAG, "Write " + command.getCharacteristicUUID());
+                Log.d(LOG_TAG, "Write " + command.getCharacteristicUUID());
                 bleProcessing = true;
                 write(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getType());
             } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
-                Log.d(TAG, "Write No Response " + command.getCharacteristicUUID());
+                Log.d(LOG_TAG, "Write No Response " + command.getCharacteristicUUID());
                 bleProcessing = true;
                 write(command.getCallback(), command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getType());
             } else if (command.getType() == BLECommand.REGISTER_NOTIFY) {
-                Log.d(TAG, "Register Notify " + command.getCharacteristicUUID());
+                Log.d(LOG_TAG, "Register Notify " + command.getCharacteristicUUID());
                 bleProcessing = true;
                 registerNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
             } else if (command.getType() == BLECommand.REMOVE_NOTIFY) {
-                Log.d(TAG, "Remove Notify " + command.getCharacteristicUUID());
+                Log.d(LOG_TAG, "Remove Notify " + command.getCharacteristicUUID());
                 bleProcessing = true;
                 removeNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
             } else if (command.getType() == BLECommand.READ_RSSI) {
-                Log.d(TAG, "Read RSSI");
+                Log.d(LOG_TAG, "Read RSSI");
                 bleProcessing = true;
                 readRSSI(command.getCallback());
             } else {
@@ -801,7 +801,7 @@ public class Peripheral extends BluetoothGattCallback {
                 throw new RuntimeException("Unexpected BLE Command type " + command.getType());
             }
         } else {
-            Log.d(TAG, "Command Queue is empty.");
+            Log.d(LOG_TAG, "Command Queue is empty.");
         }
     }
 
