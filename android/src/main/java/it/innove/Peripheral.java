@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.os.Build;
 import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static android.bluetooth.BluetoothGatt.CONNECTION_PRIORITY_HIGH;
+import static android.os.Build.VERSION_CODES.LOLLIPOP;
 
 /**
  * Peripheral wraps the BluetoothDevice and provides methods to convert to JSON.
@@ -552,7 +554,9 @@ public class Peripheral extends BluetoothGattCallback {
         }
         this.retrieveServicesCallback = callback;
 
-        gatt.requestConnectionPriority(CONNECTION_PRIORITY_HIGH);
+        if (Build.VERSION.SDK_INT >= LOLLIPOP) {
+            gatt.requestConnectionPriority(CONNECTION_PRIORITY_HIGH);
+        }
         gatt.discoverServices();
     }
 
