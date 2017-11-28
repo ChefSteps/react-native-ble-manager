@@ -275,7 +275,11 @@ public class Peripheral extends BluetoothGattCallback {
             readCallback = null;
             retrieveServicesCallback = null;
             readRSSICallback = null;
-            registerNotifyCallback = null;
+            if(registerNotifyCallback != null){
+              registerNotifyCallback.invoke("Device disconnected");
+              registerNotifyCallback = null;
+            }
+
 
         }
 
@@ -390,21 +394,19 @@ public class Peripheral extends BluetoothGattCallback {
         commandCompleted();
     }
 
-    private void setNotify(UUID serviceUUID, UUID characteristicUUID, Boolean notify, Callback callback) {
+    private void setNotify(UUID serviceUUID, UUID characteristicUUID, Boolean notify, Callback callback) throws Exception {
         if (!isConnected()) {
             callback.invoke("Device is not connected", null);
-            return;
+            throw new Exception("Device is not connected");
         }
-        Log.d(LOG_TAG, "setNotify");
-
         if (gatt == null) {
-            callback.invoke("BluetoothGatt is null");
-            return;
+            callback.invoke("BluetoothGatt is null", null);
+            throw new Exception("BluetoothGatt is null");
         }
 
         BluetoothGattService service = gatt.getService(serviceUUID);
         BluetoothGattCharacteristic characteristic = findNotifyCharacteristic(service, characteristicUUID);
-
+        // TODO!!
         if (characteristic != null) {
             if (gatt.setCharacteristicNotification(characteristic, notify)) {
 
@@ -448,13 +450,13 @@ public class Peripheral extends BluetoothGattCallback {
 
     }
 
-    public void registerNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
+    public void registerNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) throws Exception {
         Log.d(LOG_TAG, "registerNotify");
         this.setNotify(serviceUUID, characteristicUUID, true, callback);
         commandCompleted();
     }
 
-    public void removeNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
+    public void removeNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) throws Exception {
         Log.d(LOG_TAG, "removeNotify");
         this.setNotify(serviceUUID, characteristicUUID, false, callback);
         commandCompleted();
@@ -498,17 +500,17 @@ public class Peripheral extends BluetoothGattCallback {
         }
     }
 
-    public void read(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
-
+    public void read(UUID serviceUUID, UUID characteristicUUID, Callback callback) throws Exception {
+        Log.d(LOG_TAG, "@@ Doing a read");
         if (!isConnected()) {
             callback.invoke("Device is not connected", null);
-            return;
+            throw new Exception("Device is not connected");
         }
         if (gatt == null) {
             callback.invoke("BluetoothGatt is null", null);
-            return;
+            throw new Exception("BluetoothGatt is null");
         }
-
+        Log.d(LOG_TAG, "@@ Doing a read 0");
         BluetoothGattService service = gatt.getService(serviceUUID);
         BluetoothGattCharacteristic characteristic = findReadableCharacteristic(service, characteristicUUID);
 
@@ -524,16 +526,17 @@ public class Peripheral extends BluetoothGattCallback {
         commandCompleted();
     }
 
-    public void readRSSI(Callback callback) {
-        if (!isConnected()) {
-            callback.invoke("Device is not connected", null);
-            return;
-        }
-        if (gatt == null) {
-            callback.invoke("BluetoothGatt is null", null);
-            return;
-        }
+    private void throwIfDisconnectedOrGattUnavailable() throws Exception {
+      if (!isConnected()) {
+          throw new Exception("Device is not connected");
+      }
+      if (gatt == null) {
+          throw new Exception("BluetoothGatt is null");
+      }
+    }
 
+    public void readRSSI(Callback callback) throws Exception {
+        throwIfDisconnectedOrGattUnavailable();
         readRSSICallback = callback;
 
         if (!gatt.readRemoteRssi()) {
@@ -543,15 +546,8 @@ public class Peripheral extends BluetoothGattCallback {
         commandCompleted();
     }
 
-    public void retrieveServices(Callback callback) {
-        if (!isConnected()) {
-            callback.invoke("Device is not connected", null);
-            return;
-        }
-        if (gatt == null) {
-            callback.invoke("BluetoothGatt is null", null);
-            return;
-        }
+    public void retrieveServices(Callback callback) throws Exception {
+        throwIfDisconnectedOrGattUnavailable();
         this.retrieveServicesCallback = callback;
 
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
@@ -597,103 +593,98 @@ public class Peripheral extends BluetoothGattCallback {
         return true;
     }
 
-    public void write(UUID serviceUUID, UUID characteristicUUID, byte[] data, Integer maxByteSize, Integer queueSleepTime, Callback callback, int writeType) {
-        if (!isConnected()) {
-            callback.invoke("Device is not connected", null);
-            return;
-        }
-        if (gatt == null) {
-            callback.invoke("BluetoothGatt is null");
+
+
+    public void write(UUID serviceUUID, UUID characteristicUUID, byte[] data, Integer maxByteSize, Integer queueSleepTime, Callback callback, int writeType) throws Exception {
+        throwIfDisconnectedOrGattUnavailable();
+
+        BluetoothGattService service = gatt.getService(serviceUUID);
+        BluetoothGattCharacteristic characteristic = findWritableCharacteristic(service, characteristicUUID, writeType);
+
+        if (characteristic == null) {
+            callback.invoke("Characteristic " + characteristicUUID + " not found.");
         } else {
-            BluetoothGattService service = gatt.getService(serviceUUID);
-            BluetoothGattCharacteristic characteristic = findWritableCharacteristic(service, characteristicUUID, writeType);
+            characteristic.setWriteType(writeType);
 
-            if (characteristic == null) {
-                callback.invoke("Characteristic " + characteristicUUID + " not found.");
-            } else {
-                characteristic.setWriteType(writeType);
+            if (writeQueue.size() > 0) {
+                callback.invoke("You have already an queued message");
+            }
 
-                if (writeQueue.size() > 0) {
-                    callback.invoke("You have already an queued message");
+            if (writeCallback != null) {
+                callback.invoke("You're already writing");
+            }
+
+            if (writeQueue.size() == 0 && writeCallback == null) {
+
+                if (BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT == writeType) {
+                    writeCallback = callback;
                 }
 
-                if (writeCallback != null) {
-                    callback.invoke("You're already writing");
-                }
+                if (data.length > maxByteSize) {
+                    int dataLength = data.length;
+                    int count = 0;
+                    byte[] firstMessage = null;
+                    List<byte[]> splittedMessage = new ArrayList<>();
 
-                if (writeQueue.size() == 0 && writeCallback == null) {
-
-                    if (BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT == writeType) {
-                        writeCallback = callback;
-                    }
-
-                    if (data.length > maxByteSize) {
-                        int dataLength = data.length;
-                        int count = 0;
-                        byte[] firstMessage = null;
-                        List<byte[]> splittedMessage = new ArrayList<>();
-
-                        while (count < dataLength && (dataLength - count > maxByteSize)) {
-                            if (count == 0) {
-                                firstMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
-                            } else {
-                                byte[] splitMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
-                                splittedMessage.add(splitMessage);
-                            }
-                            count += maxByteSize;
-                        }
-                        if (count < dataLength) {
-                            // Other bytes in queue
-                            byte[] splitMessage = Arrays.copyOfRange(data, count, data.length);
+                    while (count < dataLength && (dataLength - count > maxByteSize)) {
+                        if (count == 0) {
+                            firstMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
+                        } else {
+                            byte[] splitMessage = Arrays.copyOfRange(data, count, count + maxByteSize);
                             splittedMessage.add(splitMessage);
                         }
+                        count += maxByteSize;
+                    }
+                    if (count < dataLength) {
+                        // Other bytes in queue
+                        byte[] splitMessage = Arrays.copyOfRange(data, count, data.length);
+                        splittedMessage.add(splitMessage);
+                    }
 
-                        if (BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT == writeType) {
-                            writeQueue.addAll(splittedMessage);
-                            if (!doWrite(characteristic, firstMessage)) {
-                                writeQueue.clear();
-                                writeCallback = null;
-                                callback.invoke("Write failed");
-                            }
-                        } else {
-                            try {
-                                boolean writeError = false;
-                                if (!doWrite(characteristic, firstMessage)) {
-                                    writeError = true;
-                                    callback.invoke("Write failed");
-                                }
-                                if (!writeError) {
-                                    Thread.sleep(queueSleepTime);
-                                    for (byte[] message : splittedMessage) {
-                                        if (!doWrite(characteristic, message)) {
-                                            writeError = true;
-                                            callback.invoke("Write failed");
-                                            break;
-                                        }
-                                        Thread.sleep(queueSleepTime);
-                                    }
-                                    if (!writeError)
-                                        callback.invoke();
-                                }
-                            } catch (InterruptedException e) {
-                                callback.invoke("Error during writing");
-                            }
+                    if (BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT == writeType) {
+                        writeQueue.addAll(splittedMessage);
+                        if (!doWrite(characteristic, firstMessage)) {
+                            writeQueue.clear();
+                            writeCallback = null;
+                            callback.invoke("Write failed");
                         }
                     } else {
-                        if (doWrite(characteristic, data)) {
-                            Log.d(LOG_TAG, "Write completed");
-                            if (BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE == writeType) {
-                                callback.invoke();
+                        try {
+                            boolean writeError = false;
+                            if (!doWrite(characteristic, firstMessage)) {
+                                writeError = true;
+                                callback.invoke("Write failed");
                             }
-                        } else {
-                            callback.invoke("Write failed");
-                            writeCallback = null;
+                            if (!writeError) {
+                                Thread.sleep(queueSleepTime);
+                                for (byte[] message : splittedMessage) {
+                                    if (!doWrite(characteristic, message)) {
+                                        writeError = true;
+                                        callback.invoke("Write failed");
+                                        break;
+                                    }
+                                    Thread.sleep(queueSleepTime);
+                                }
+                                if (!writeError)
+                                    callback.invoke();
+                            }
+                        } catch (InterruptedException e) {
+                            callback.invoke("Error during writing");
                         }
+                    }
+                } else {
+                    if (doWrite(characteristic, data)) {
+                        Log.d(LOG_TAG, "Write completed");
+                        if (BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE == writeType) {
+                            callback.invoke();
+                        }
+                    } else {
+                        callback.invoke("Write failed");
+                        writeCallback = null;
                     }
                 }
             }
         }
-
     }
 
     // Some peripherals re-use UUIDs for multiple characteristics so we need to check the properties
@@ -742,6 +733,7 @@ public class Peripheral extends BluetoothGattCallback {
     public void queueRegisterNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
         BLECommand command = new BLECommand(serviceUUID, characteristicUUID, null, null, callback, BLECommand.REGISTER_NOTIFY);
         queueCommand(command);
+        Log.d(LOG_TAG, "queueRegisterNotifyCallback finished");
     }
 
     public void queueRemoveNotifyCallback(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
@@ -756,9 +748,10 @@ public class Peripheral extends BluetoothGattCallback {
 
     private void queueCommand(BLECommand command) {
         commandQueue.add(command);
-
         if (!bleProcessing) {
-            processCommands();
+          processCommands();
+        } else {
+          Log.d(LOG_TAG, "Will not process commands, already processing");
         }
     }
 
@@ -778,38 +771,53 @@ public class Peripheral extends BluetoothGattCallback {
         }
 
         BLECommand command = commandQueue.poll();
-        if (command != null) {
-            if (command.getType() == BLECommand.READ) {
-                Log.d(LOG_TAG, "Read " + command.getCharacteristicUUID());
-                bleProcessing = true;
-                read(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
-            } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) {
-                Log.d(LOG_TAG, "Write " + command.getCharacteristicUUID());
-                bleProcessing = true;
-                write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
-            } else if (command.getType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
-                Log.d(LOG_TAG, "Write No Response " + command.getCharacteristicUUID());
-                bleProcessing = true;
-                write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
-            } else if (command.getType() == BLECommand.REGISTER_NOTIFY) {
-                Log.d(LOG_TAG, "Register Notify " + command.getCharacteristicUUID());
-                bleProcessing = true;
-                registerNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
-            } else if (command.getType() == BLECommand.REMOVE_NOTIFY) {
-                Log.d(LOG_TAG, "Remove Notify " + command.getCharacteristicUUID());
-                bleProcessing = true;
-                removeNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
-            } else if (command.getType() == BLECommand.READ_RSSI) {
-                Log.d(LOG_TAG, "Read RSSI");
-                bleProcessing = true;
-                readRSSI(command.getCallback());
-            } else {
-                // this shouldn't happen
-                throw new RuntimeException("Unexpected BLE Command type " + command.getType());
-            }
-        } else {
-            Log.d(LOG_TAG, "Command Queue is empty.");
+
+        if (command == null) {
+          Log.d(LOG_TAG, "Command Queue is empty.");
+          return;
         }
+
+        try {
+          bleProcessing = true;
+
+          int commandType = command.getType();
+
+          if(commandType == BLECommand.READ){
+            Log.d(LOG_TAG, "$Read " + command.getCharacteristicUUID());
+            read(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
+          }
+          else if(commandType == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT){
+              Log.d(LOG_TAG, "$Write " + command.getCharacteristicUUID());
+              write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
+          }
+          else if(commandType == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE){
+            Log.d(LOG_TAG, "$Write No Response " + command.getCharacteristicUUID());
+            write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
+          }
+          else if(commandType == BLECommand.REGISTER_NOTIFY){
+            Log.d(LOG_TAG, "$Register Notify " + command.getCharacteristicUUID());
+            registerNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
+          }
+          else if(commandType == BLECommand.REMOVE_NOTIFY){
+            Log.d(LOG_TAG, "$Remove Notify " + command.getCharacteristicUUID());
+            removeNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
+          }
+          else if(commandType == BLECommand.READ_RSSI){
+            Log.d(LOG_TAG, "$Read RSSI");
+            readRSSI(command.getCallback());
+          }
+          else {
+            throw new RuntimeException("Unexpected BLE Command type " + command.getType());
+          }
+
+
+        } catch (Exception e) {
+          Log.d(LOG_TAG, "Queue command failed");
+          Log.e(LOG_TAG, "Queue command exception:", e);
+          // What do we do about the callback?
+          bleProcessing = false;
+        }
+
     }
 
     // End new queue logic

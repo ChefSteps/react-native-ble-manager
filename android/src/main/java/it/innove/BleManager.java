@@ -279,7 +279,12 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		Log.d(LOG_TAG, "Retrieve services from: " + deviceUUID);
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			peripheral.retrieveServices(callback);
+			try {
+				peripheral.retrieveServices(callback);
+			} catch (e) {
+				Log.d(LOG_TAG, "peripheral.retrieveServices failed", e);
+			}
+
 		} else
 			callback.invoke("Peripheral not found", null);
 	}
