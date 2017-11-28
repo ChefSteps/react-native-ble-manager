@@ -668,6 +668,7 @@ public class Peripheral extends BluetoothGattCallback {
                 throw new CallbackException("Write failed - single message");
             }
         }
+        commandCompleted();
     }
 
     // Some peripherals re-use UUIDs for multiple characteristics so we need to check the properties
