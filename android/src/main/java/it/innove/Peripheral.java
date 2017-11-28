@@ -504,9 +504,7 @@ public class Peripheral extends BluetoothGattCallback {
     }
 
     public void read(UUID serviceUUID, UUID characteristicUUID, Callback callback) throws Exception {
-        Log.d(LOG_TAG, "@@ Doing a read");
         throwIfDisconnectedOrGattUnavailable();
-        Log.d(LOG_TAG, "@@ Doing a read 0");
 
         BluetoothGattService service = gatt.getService(serviceUUID);
         BluetoothGattCharacteristic characteristic = findReadableCharacteristic(service, characteristicUUID);
@@ -668,7 +666,6 @@ public class Peripheral extends BluetoothGattCallback {
                 throw new CallbackException("Write failed - single message");
             }
         }
-        commandCompleted();
     }
 
     // Some peripherals re-use UUIDs for multiple characteristics so we need to check the properties
@@ -730,12 +727,14 @@ public class Peripheral extends BluetoothGattCallback {
         queueCommand(command);
     }
 
+    private String lastCommand = "Initial State";
+
     private void queueCommand(BLECommand command) {
         commandQueue.add(command);
         if (!bleProcessing) {
           processCommands();
         } else {
-          Log.d(LOG_TAG, "Will not process commands, already processing");
+          Log.d(LOG_TAG, "Will not process commands, still processing: " + lastCommand);
         }
     }
 
@@ -768,26 +767,32 @@ public class Peripheral extends BluetoothGattCallback {
 
           if(commandType == BLECommand.READ){
             Log.d(LOG_TAG, "$Read " + command.getCharacteristicUUID());
+            lastCommand = "Read";
             read(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
           }
           else if(commandType == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT){
-              Log.d(LOG_TAG, "$Write " + command.getCharacteristicUUID());
-              write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
+            Log.d(LOG_TAG, "$Write " + command.getCharacteristicUUID());
+            lastCommand = "Write";
+            write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
           }
           else if(commandType == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE){
             Log.d(LOG_TAG, "$Write No Response " + command.getCharacteristicUUID());
+            lastCommand = "Write No Response";
             write(command.getServiceUUID(), command.getCharacteristicUUID(), command.getData(), command.getMaxByteSize(), command.getQueueSleepTime(), command.getCallback(), command.getType());
           }
           else if(commandType == BLECommand.REGISTER_NOTIFY){
             Log.d(LOG_TAG, "$Register Notify " + command.getCharacteristicUUID());
+            lastCommand = "Register Notify";
             registerNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
           }
           else if(commandType == BLECommand.REMOVE_NOTIFY){
             Log.d(LOG_TAG, "$Remove Notify " + command.getCharacteristicUUID());
+            lastCommand = "Remove Notify";
             removeNotify(command.getServiceUUID(), command.getCharacteristicUUID(), command.getCallback());
           }
           else if(commandType == BLECommand.READ_RSSI){
             Log.d(LOG_TAG, "$Read RSSI");
+            lastCommand = "Read RSSI";
             readRSSI(command.getCallback());
           }
           else {
