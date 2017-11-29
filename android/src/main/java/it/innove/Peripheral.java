@@ -35,6 +35,11 @@ class CallbackException extends Exception {
     }
 }
 
+class ErrorTypes {
+	// Types
+	public static String DEVICE_DISCONNECTED = "DEVICE_DISCONNECTED";
+}
+
 /**
  * Peripheral wraps the BluetoothDevice and provides methods to convert to JSON.
  */
@@ -131,7 +136,7 @@ public class Peripheral extends BluetoothGattCallback {
             map.putString("id", device.getAddress()); // mac address
             map.putMap("advertising", byteArrayToWritableMap(advertisingData));
             map.putInt("rssi", advertisingRSSI);
-        } catch (Exception e) { // this shouldn't happen
+        } catch (Exception e) { // this shouldn't happen - (but actually happens quite a bit)
             e.printStackTrace();
         }
 
@@ -270,7 +275,7 @@ public class Peripheral extends BluetoothGattCallback {
             List<Callback> callbacks = Arrays.asList(writeCallback, retrieveServicesCallback, readRSSICallback, readCallback, registerNotifyCallback);
             for (Callback currentCallback : callbacks) {
                 if (currentCallback != null) {
-                    currentCallback.invoke("Device disconnected");
+                    currentCallback.invoke(ErrorTypes.DEVICE_DISCONNECTED);
                 }
             }
             if (connectCallback != null) {
@@ -282,7 +287,7 @@ public class Peripheral extends BluetoothGattCallback {
             retrieveServicesCallback = null;
             readRSSICallback = null;
             if(registerNotifyCallback != null){
-              registerNotifyCallback.invoke("Device disconnected");
+              registerNotifyCallback.invoke(ErrorTypes.DEVICE_DISCONNECTED);
               registerNotifyCallback = null;
             }
 
@@ -401,11 +406,8 @@ public class Peripheral extends BluetoothGattCallback {
     }
 
     private void throwIfDisconnectedOrGattUnavailable() throws Exception {
-      if (!isConnected()) {
-          throw new Exception("Device is not connected");
-      }
-      if (gatt == null) {
-          throw new Exception("BluetoothGatt is null");
+      if (!isConnected() || gatt == null) {
+          throw new Exception(ErrorTypes.DEVICE_DISCONNECTED);
       }
     }
 
@@ -805,7 +807,7 @@ public class Peripheral extends BluetoothGattCallback {
           Log.e(LOG_TAG, "Queue command exception:", e);
           Callback callback = command.getCallback();
           if(callback != null) {
-            callback.invoke("Command failed: " + e.getMessage(), null);
+            callback.invoke("" + e.getMessage(), null);
           }
           commandCompleted();
         }
