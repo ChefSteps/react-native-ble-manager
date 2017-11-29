@@ -283,7 +283,7 @@ public class Peripheral extends BluetoothGattCallback {
             readRSSICallback = null;
             registerNotifyCallback = null;
 
-            commandQueue.removeAll();
+            commandQueue.clear();
             if(bleProcessing){
               // Will set bleProcessing to false.
               commandCompleted();
@@ -403,18 +403,11 @@ public class Peripheral extends BluetoothGattCallback {
     }
 
     private void setNotify(UUID serviceUUID, UUID characteristicUUID, Boolean notify, Callback callback) {
-        if(isDisconnected()){
-          callback.invoke()
-        }
-        if (!isConnected()) {
-            callback.invoke("Device is not connected", null);
-            return;
-        }
         Log.d(LOG_TAG, "setNotify");
-
-        if (gatt == null) {
-            callback.invoke("BluetoothGatt is null");
-            return;
+        if(isDisconnected()){
+          callback.invoke(ErrorTypes.DEVICE_DISCONNECTED);
+          return; // Returning without calling commandCompleted() because caller is
+          // responsible for calling commandCompleted().
         }
 
         BluetoothGattService service = gatt.getService(serviceUUID);
@@ -460,7 +453,6 @@ public class Peripheral extends BluetoothGattCallback {
         } else {
             callback.invoke("Characteristic " + characteristicUUID + " not found");
         }
-
     }
 
     public void registerNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
