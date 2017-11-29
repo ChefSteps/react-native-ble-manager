@@ -199,7 +199,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 
 	@ReactMethod
 	public void disconnect(String peripheralUUID, Callback callback) {
-		Log.d(LOG_TAG, "Requested to disconnect from: " + peripheralUUID);
+		Log.d(LOG_TAG, "Disconnect from: " + peripheralUUID);
 
 		Peripheral peripheral = peripherals.get(peripheralUUID);
 		if (peripheral != null) {
@@ -279,12 +279,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		Log.d(LOG_TAG, "Retrieve services from: " + deviceUUID);
 		Peripheral peripheral = peripherals.get(deviceUUID);
 		if (peripheral != null) {
-			try {
-				peripheral.retrieveServices(callback);
-			} catch (Throwable e) {
-				Log.d(LOG_TAG, "peripheral.retrieveServices failed", e);
-			}
-
+			peripheral.retrieveServices(callback);
 		} else
 			callback.invoke("Peripheral not found", null);
 	}
