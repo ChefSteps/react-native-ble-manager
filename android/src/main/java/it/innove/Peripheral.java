@@ -276,6 +276,11 @@ public class Peripheral extends BluetoothGattCallback {
                     currentCallback.invoke(ErrorTypes.DEVICE_DISCONNECTED);
                 }
             }
+            if (connectCallback != null) {
+                connectCallback = null;
+                connectCallback.invoke("Connection error");
+                connectCallback = null;
+             }
             connectCallback = null;
             writeCallback = null;
             readCallback = null;
