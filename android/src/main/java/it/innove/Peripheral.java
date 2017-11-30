@@ -376,6 +376,7 @@ public class Peripheral extends BluetoothGattCallback {
         super.onDescriptorWrite(gatt, descriptor, status);
         if (registerNotifyCallback != null) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(LOG_TAG, "onDescriptorWrite success, registerNotify complete");
                 registerNotifyCallback.invoke();
             } else {
                 registerNotifyCallback.invoke("Error writing descriptor stats=" + status, null);
@@ -650,21 +651,21 @@ public class Peripheral extends BluetoothGattCallback {
                             if (!doWrite(characteristic, firstMessage)) {
                                 writeQueue.clear();
                                 writeCallback = null;
-                                callback.invoke("Write failed");
+                                callback.invoke("Write failed 0");
                             }
                         } else {
                             try {
                                 boolean writeError = false;
                                 if (!doWrite(characteristic, firstMessage)) {
                                     writeError = true;
-                                    callback.invoke("Write failed");
+                                    callback.invoke("Write failed 1");
                                 }
                                 if (!writeError) {
                                     Thread.sleep(queueSleepTime);
                                     for (byte[] message : splittedMessage) {
                                         if (!doWrite(characteristic, message)) {
                                             writeError = true;
-                                            callback.invoke("Write failed");
+                                            callback.invoke("Write failed 2");
                                             break;
                                         }
                                         Thread.sleep(queueSleepTime);
@@ -679,13 +680,13 @@ public class Peripheral extends BluetoothGattCallback {
                         }
                     } else {
                         if (doWrite(characteristic, data)) {
+                            didWrite = true;
                             Log.d(LOG_TAG, "Write completed");
                             if (BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE == writeType) {
                                 callback.invoke();
-                                didWrite = true;
                             }
                         } else {
-                            callback.invoke("Write failed");
+                            callback.invoke("Write failed 3");
                             writeCallback = null;
                         }
                     }
