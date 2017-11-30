@@ -12,7 +12,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.read(peripheralId, serviceUUID, characteristicUUID, (error, data) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill(data);
         }
@@ -24,7 +24,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.readRSSI(peripheralId, (error, rssi) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill(rssi);
         }
@@ -36,7 +36,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.retrieveServices(peripheralId, (error, peripheral) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill(peripheral);
         }
@@ -51,7 +51,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.write(peripheralId, serviceUUID, characteristicUUID, data, maxByteSize, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -69,7 +69,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.writeWithoutResponse(peripheralId, serviceUUID, characteristicUUID, data, maxByteSize, queueSleepTime, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -81,7 +81,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.connect(peripheralId, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -93,7 +93,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.createBond(peripheralId, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -105,7 +105,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.disconnect(peripheralId, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -117,7 +117,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.startNotification(peripheralId, serviceUUID, characteristicUUID, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -129,7 +129,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.stopNotification(peripheralId, serviceUUID, characteristicUUID, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -148,7 +148,7 @@ class BleManager  {
       }
       bleManager.start(options, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -180,7 +180,7 @@ class BleManager  {
 
       bleManager.scan(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -192,7 +192,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.stopScan((error) => {
         if (error != null) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -204,7 +204,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.enableBluetooth((error) => {
         if (error != null) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
@@ -216,7 +216,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.getConnectedPeripherals(serviceUUIDs, (error, result) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           if (result != null) {
             fulfill(result);
@@ -232,7 +232,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.getBondedPeripherals((error, result) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           if (result != null) {
             fulfill(result);
@@ -248,7 +248,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.getDiscoveredPeripherals((error, result) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           if (result != null) {
             fulfill(result);
@@ -264,7 +264,7 @@ class BleManager  {
     return new Promise((fulfill, reject) => {
       bleManager.removePeripheral(peripheralId, (error) => {
         if (error) {
-          reject(error);
+          reject(new Error(error));
         } else {
           fulfill();
         }
