@@ -404,67 +404,73 @@ public class Peripheral extends BluetoothGattCallback {
 
     private void setNotify(UUID serviceUUID, UUID characteristicUUID, Boolean notify, Callback callback) {
         Log.d(LOG_TAG, "setNotify");
+        Boolean setNotifyCompleted = false;
+
         if(isDisconnected()){
           callback.invoke(ErrorTypes.DEVICE_DISCONNECTED);
-          return; // Returning without calling commandCompleted() because caller is
-          // responsible for calling commandCompleted().
-        }
+        } else {
+            BluetoothGattService service = gatt.getService(serviceUUID);
+            BluetoothGattCharacteristic characteristic = findNotifyCharacteristic(service, characteristicUUID);
 
-        BluetoothGattService service = gatt.getService(serviceUUID);
-        BluetoothGattCharacteristic characteristic = findNotifyCharacteristic(service, characteristicUUID);
+            if (characteristic != null) {
+                if (gatt.setCharacteristicNotification(characteristic, notify)) {
 
-        if (characteristic != null) {
-            if (gatt.setCharacteristicNotification(characteristic, notify)) {
+                    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUIDHelper.uuidFromString(CHARACTERISTIC_NOTIFICATION_CONFIG));
+                    if (descriptor != null) {
 
-                BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUIDHelper.uuidFromString(CHARACTERISTIC_NOTIFICATION_CONFIG));
-                if (descriptor != null) {
-
-                    // Prefer notify over indicate
-                    if ((characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
-                        Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " set NOTIFY");
-                        descriptor.setValue(notify ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
-                    } else if ((characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0) {
-                        Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " set INDICATE");
-                        descriptor.setValue(notify ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
-                    } else {
-                        Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " does not have NOTIFY or INDICATE property set");
-                    }
-
-                    try {
-                        if (gatt.writeDescriptor(descriptor)) {
-                            Log.d(LOG_TAG, "setNotify complete");
-                            registerNotifyCallback = callback;
+                        // Prefer notify over indicate
+                        if ((characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
+                            Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " set NOTIFY");
+                            descriptor.setValue(notify ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+                        } else if ((characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0) {
+                            Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " set INDICATE");
+                            descriptor.setValue(notify ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
                         } else {
-                            callback.invoke("Failed to set client characteristic notification for " + characteristicUUID);
+                            Log.d(LOG_TAG, "Characteristic " + characteristicUUID + " does not have NOTIFY or INDICATE property set");
                         }
-                    } catch (Exception e) {
-                        Log.d(LOG_TAG, "Error on setNotify", e);
-                        callback.invoke("Failed to set client characteristic notification for " + characteristicUUID + ", error: " + e.getMessage());
+
+                        try {
+                            if (gatt.writeDescriptor(descriptor)) {
+                                Log.d(LOG_TAG, "setNotify complete");
+                                registerNotifyCallback = callback;
+                                setNotifyCompleted = true;
+                            } else {
+                                callback.invoke("Failed to set client characteristic notification for " + characteristicUUID);
+                            }
+                        } catch (Exception e) {
+                            Log.d(LOG_TAG, "Error on setNotify", e);
+                            callback.invoke("Failed to set client characteristic notification for " + characteristicUUID + ", error: " + e.getMessage());
+                        }
+
+                    } else {
+                        callback.invoke("Set notification failed for " + characteristicUUID);
                     }
 
                 } else {
-                    callback.invoke("Set notification failed for " + characteristicUUID);
+                    callback.invoke("Failed to register notification for " + characteristicUUID);
                 }
 
             } else {
-                callback.invoke("Failed to register notification for " + characteristicUUID);
+                callback.invoke("Characteristic " + characteristicUUID + " not found");
             }
+          }
 
-        } else {
-            callback.invoke("Characteristic " + characteristicUUID + " not found");
-        }
+          // If setNotifyCompleted is false, we ran into an error and can complete now.
+          // if we setNotifyCompleted is true, we'll need to wait for onDescriptorWrite
+          // before we can call commandCompleted();
+          if(!setNotifyCompleted){
+            commandCompleted();
+          }
     }
 
     public void registerNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
         Log.d(LOG_TAG, "registerNotify");
         this.setNotify(serviceUUID, characteristicUUID, true, callback);
-        commandCompleted(); // Is this really complete?
     }
 
     public void removeNotify(UUID serviceUUID, UUID characteristicUUID, Callback callback) {
         Log.d(LOG_TAG, "removeNotify");
         this.setNotify(serviceUUID, characteristicUUID, false, callback);
-        commandCompleted();
     }
 
     // Some devices reuse UUIDs across characteristics, so we can't use service.getCharacteristic(characteristicUUID)
